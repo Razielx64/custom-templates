@@ -1,0 +1,469 @@
+id: php-exposed-endpoints
+
+info:
+  name: PHP Exposed Management Endpoints
+  author: Razielx64
+  severity: medium
+  description: Detects exposed debug, admin and management endpoints in PHP applications (Laravel, Symfony, WordPress, etc)
+  tags: php,laravel,symfony,wordpress,exposure,misconfig
+
+requests:
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/phpinfo.php"
+      - "{{BaseURL}}/info.php"
+      - "{{BaseURL}}/php_info.php"
+      - "{{BaseURL}}/test.php"
+      - "{{BaseURL}}/i.php"
+      - "{{BaseURL}}/php/phpinfo.php"
+      - "{{BaseURL}}/server-info.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "PHP Version"
+          - "phpinfo()"
+          - "PHP License"
+          - "php.ini"
+          - "Configuration File"
+          - "Loaded Configuration"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'PHP Version\s*</td><td[^>]*>([^<]+)'       # versão do PHP
+          - 'DOCUMENT_ROOT\s*</td><td[^>]*>([^<]+)'     # path do servidor
+          - 'SERVER_ADDR\s*</td><td[^>]*>([^<]+)'       # IP interno
+          - 'extension_dir\s*</td><td[^>]*>([^<]+)'     # path de extensões
+          - 'disable_functions\s*</td><td[^>]*>([^<]+)' # funções desabilitadas
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.env.local"
+      - "{{BaseURL}}/.env.production"
+      - "{{BaseURL}}/.env.backup"
+      - "{{BaseURL}}/.env.bak"
+      - "{{BaseURL}}/.env.old"
+      - "{{BaseURL}}/api/.env"
+      - "{{BaseURL}}/app/.env"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "APP_KEY"
+          - "APP_ENV"
+          - "DB_PASSWORD"
+          - "DB_DATABASE"
+          - "MAIL_PASSWORD"
+          - "AWS_SECRET"
+          - "REDIS_PASSWORD"
+          - "JWT_SECRET"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'APP_KEY=([^\s]+)'
+          - 'DB_PASSWORD=([^\s]+)'
+          - 'DB_USERNAME=([^\s]+)'
+          - 'DB_DATABASE=([^\s]+)'
+          - 'MAIL_PASSWORD=([^\s]+)'
+          - 'AWS_SECRET_ACCESS_KEY=([^\s]+)'
+          - 'REDIS_PASSWORD=([^\s]+)'
+
+  # ─── Laravel Telescope ───────────────────────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/telescope"
+      - "{{BaseURL}}/telescope/requests"
+      - "{{BaseURL}}/telescope/commands"
+      - "{{BaseURL}}/telescope/schedule"
+      - "{{BaseURL}}/telescope/jobs"
+      - "{{BaseURL}}/telescope/exceptions"
+      - "{{BaseURL}}/telescope/logs"
+      - "{{BaseURL}}/telescope/queries"
+      - "{{BaseURL}}/telescope/models"
+      - "{{BaseURL}}/telescope/redis"
+      - "{{BaseURL}}/telescope/events"
+      - "{{BaseURL}}/telescope/mail"
+      - "{{BaseURL}}/telescope/notifications"
+      - "{{BaseURL}}/telescope/gates"
+      - "{{BaseURL}}/telescope/cache"
+      - "{{BaseURL}}/telescope/dumps"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Laravel Telescope"
+          - "telescope"
+          - "Telescope"
+          - "laravel-telescope"
+          - "__telescope"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "login"
+          - "unauthorized"
+          - "403"
+          - "Forbidden"
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"payload":\s*\{([^}]+)\}'    # payloads de requests
+          - '"sql":\s*"([^"]+)"'          # queries SQL
+          - '"email":\s*"([^"]+)"'        # emails capturados
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/horizon"
+      - "{{BaseURL}}/horizon/dashboard"
+      - "{{BaseURL}}/horizon/jobs/pending"
+      - "{{BaseURL}}/horizon/jobs/completed"
+      - "{{BaseURL}}/horizon/jobs/silenced"
+      - "{{BaseURL}}/horizon/jobs/failed"
+      - "{{BaseURL}}/horizon/monitoring"
+      - "{{BaseURL}}/horizon/metrics/jobs"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Laravel Horizon"
+          - "Horizon"
+          - "horizon"
+          - "laravel-horizon"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "login"
+          - "unauthorized"
+          - "403"
+          - "Forbidden"
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"connection":\s*"([^"]+)"'   # redis/queue connection
+          - '"queue":\s*"([^"]+)"'        # nomes das filas
+          - '"payload":\s*"([^"]+)"'      # job payloads
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/_debugbar/open"
+      - "{{BaseURL}}/_debugbar/assets/javascript"
+      - "{{BaseURL}}/_debugbar/assets/stylesheets"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "debugbar"
+          - "DebugBar"
+          - "phpdebugbar"
+          - "PhpDebugBar"
+          - "laravel-debugbar"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"sql":\s*"([^"]+)"'          # queries SQL
+          - '"bindings":\s*\[([^\]]+)\]'  # bindings das queries
+          - '"path":\s*"([^"]+)"'         # paths internos
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/adminer.php"
+      - "{{BaseURL}}/adminer"
+      - "{{BaseURL}}/adminer/adminer.php"
+      - "{{BaseURL}}/phpmyadmin"
+      - "{{BaseURL}}/phpmyadmin/"
+      - "{{BaseURL}}/pma"
+      - "{{BaseURL}}/mysql"
+      - "{{BaseURL}}/db"
+      - "{{BaseURL}}/database"
+      - "{{BaseURL}}/dbadmin"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "adminer"
+          - "Adminer"
+          - "phpMyAdmin"
+          - "phpmyadmin"
+          - "db_structure.php"
+          - "server_databases.php"
+          - "Login - Adminer"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'Adminer\s*([\d\.]+)'         # versão do Adminer
+          - 'phpMyAdmin\s*([\d\.]+)'      # versão do phpMyAdmin
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/wp-admin/"
+      - "{{BaseURL}}/wp-login.php"
+      - "{{BaseURL}}/wp-json/wp/v2/users"
+      - "{{BaseURL}}/wp-json/"
+      - "{{BaseURL}}/xmlrpc.php"
+      - "{{BaseURL}}/?author=1"
+      - "{{BaseURL}}/wp-config.php.bak"
+      - "{{BaseURL}}/wp-config.php.old"
+      - "{{BaseURL}}/wp-config.bak"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "WordPress"
+          - "wp-login"
+          - "wp-admin"
+          - "wp-content"
+          - "xmlrpc"
+          - "wp_nonce"
+          - "wpnonce"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"slug":\s*"([^"]+)"'         # usernames via REST API
+          - '"name":\s*"([^"]+)"'         # display names
+          - 'WordPress ([\d\.]+)'         # versão do WordPress
+          - 'wp-content/plugins/([^/]+)'  # plugins instalados
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/_profiler"
+      - "{{BaseURL}}/_profiler/phpinfo"
+      - "{{BaseURL}}/_profiler/open"
+      - "{{BaseURL}}/_wdt"
+      - "{{BaseURL}}/app_dev.php"
+      - "{{BaseURL}}/app_dev.php/_profiler"
+      - "{{BaseURL}}/index_dev.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Symfony Profiler"
+          - "symfony-profiler"
+          - "sf-toolbar"
+          - "Symfony"
+          - "_profiler"
+          - "Symfony\\"
+          - "sfwdt"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'Symfony\s*([\d\.]+)'         # versão do Symfony
+          - '"token":\s*"([^"]+)"'        # tokens de sessão
+          - 'DATABASE_URL["\s:=]+([^\s"<]+)' # database URL
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/xdebug"
+      - "{{BaseURL}}/xdebug.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "xdebug"
+          - "Xdebug"
+          - "xdebug.remote_host"
+          - "xdebug.remote_port"
+          - "xdebug.idekey"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'xdebug\.remote_host\s*=\s*([^\s<]+)'
+          - 'xdebug\.remote_port\s*=\s*([^\s<]+)'
+          - 'Xdebug\s*v([\d\.]+)'
+
+  # ─── composer.json / composer.lock expostos ───────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/composer.json"
+      - "{{BaseURL}}/composer.lock"
+      - "{{BaseURL}}/packages.json"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"require"'
+          - '"require-dev"'
+          - '"packages"'
+          - '"name"'
+          - '"version"'
+          - "laravel/framework"
+          - "symfony/symfony"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"name":\s*"([^"]+)"'         # nome do projeto
+          - '"laravel/framework":\s*"([^"]+)"'  # versão do Laravel
+          - '"php":\s*"([^"]+)"'          # versão PHP requerida
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/backup.sql"
+      - "{{BaseURL}}/backup.zip"
+      - "{{BaseURL}}/db_backup.sql"
+      - "{{BaseURL}}/database.sql"
+      - "{{BaseURL}}/dump.sql"
+      - "{{BaseURL}}/site.zip"
+      - "{{BaseURL}}/www.zip"
+      - "{{BaseURL}}/html.zip"
+      - "{{BaseURL}}/public.zip"
+      - "{{BaseURL}}/web.zip"
+      - "{{BaseURL}}/backup/db.sql"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "INSERT INTO"
+          - "CREATE TABLE"
+          - "mysqldump"
+          - "-- MySQL dump"
+          - "-- PostgreSQL database dump"
+          - "DROP TABLE"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "INSERT INTO `users`[^;]+"    # dump da tabela users
+          - "'[a-f0-9]{60}'"              # password hashes
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/storage/logs/laravel.log"
+      - "{{BaseURL}}/app/storage/logs/laravel.log"
+      - "{{BaseURL}}/laravel.log"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "local.ERROR"
+          - "production.ERROR"
+          - "laravel"
+          - "Stack trace"
+          - "ErrorException"
+          - "[stacktrace]"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'production\.ERROR:([^\n]+)'   # erros de produção
+          - '"password"=>"([^"]+)"'        # senhas em stack traces
+          - 'mysql:host=([^;]+)'           # host do banco de dados

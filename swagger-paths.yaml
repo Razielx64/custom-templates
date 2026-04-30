@@ -1,0 +1,86 @@
+id: swagger-paths
+
+info:
+  name: Swagger UI
+  author: Razielx64
+  severity: low
+  description: Detects swagger
+  tags: swagger
+
+requests:
+  - method: GET
+    path:
+      - '{{BaseURL}}/'
+      - '{{BaseURL}}/index.html'
+      - '{{BaseURL}}/swagger-ui'
+      - '{{BaseURL}}/api/'
+      - '{{BaseURL}}/docs/'
+      - '{{BaseURL}}/idm/v2/api-docs'
+      - '{{BaseURL}}/docs/api-reference'
+      - '{{BaseURL}}/swaggerui'
+      - '{{BaseURL}}/api/help'
+      - '{{BaseURL}}/doc'
+      - '{{BaseURL}}/api-reference'
+      - '{{BaseURL}}/swagger/docs/v1'
+      - '{{BaseURL}}/reference'
+      - '{{BaseURL}}/swagger/ui/index'
+      - '{{BaseURL}}/swagger/index.html'
+      - '{{BaseURL}}/swagger/index.html'
+      - '{{BaseURL}}/swagger-ui.html'
+      - '{{BaseURL}}/swagger/swagger-ui.html'
+      - '{{BaseURL}}/api/swagger-ui.html'
+      - '{{BaseURL}}/api-docs/'
+      - '{{BaseURL}}/api/index.html'
+      - '{{BaseURL}}/api/docs/'
+      - '{{BaseURL}}/api/swagger/index.html'
+      - '{{BaseURL}}/api/swagger/swagger-ui.html'
+      - '{{BaseURL}}/api/swagger-ui/api-docs'
+      - '{{BaseURL}}/api/api-docs'
+      - '{{BaseURL}}/api/apidocs'
+      - '{{BaseURL}}/api/swagger'
+      - '{{BaseURL}}/api/swagger/static/index.html'
+      - '{{BaseURL}}/api/swagger-resources'
+      - '{{BaseURL}}/api/swagger-resources/restservices/v2/api-docs'
+      - '{{BaseURL}}/api/__swagger__/'
+      - '{{BaseURL}}/api/_swagger_/'
+      - '{{BaseURL}}/api/spec'
+      - '{{BaseURL}}/api/swagger/ui/index'
+      - '{{BaseURL}}/__swagger__/'
+      - '{{BaseURL}}/api/v2/doc'
+      - '{{BaseURL}}/api/v1/'
+      - '{{BaseURL}}/api/v1/doc'
+      - '{{BaseURL}}/_swagger_/'
+      - '{{BaseURL}}/swagger-resources/restservices/v2/api-docs'
+      - '{{BaseURL}}/classicapi/doc/'
+      - '{{BaseURL}}/api/v1/openapi'
+      # Versioned paths
+      - '{{BaseURL}}/v0.12/index.html'
+      - '{{BaseURL}}/v0.11/index.html'
+      - '{{BaseURL}}/v0.10/index.html'
+      - '{{BaseURL}}/v0.9/index.html'
+      - '{{BaseURL}}/v0.8/index.html'
+      - '{{BaseURL}}/v0.7/index.html'
+      - '{{BaseURL}}/v0.6/index.html'
+      - '{{BaseURL}}/v0.5/index.html'
+      - '{{BaseURL}}/v0.4/index.html'
+      - '{{BaseURL}}/v0.3/index.html'
+      - '{{BaseURL}}/v0.2/index.html'
+      - '{{BaseURL}}/v0.1/index.html'
+
+    redirects: true
+    max-redirects: 3
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "swagger-ui"           # Swagger UI specific identifier
+          - "swagger-initializer"  # Swagger UI common script
+          - "api-docs"             # Often present in API docs
+          - "swagger.json"         # Common in Swagger UI
+        condition: or
+
+      - type: status
+        status:
+          - 200

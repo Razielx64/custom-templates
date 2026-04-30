@@ -1,0 +1,194 @@
+id: nodejs-exposed-endpoints
+
+info:
+  name: Node.js Exposed Management Endpoints
+  author: Razielx64
+  severity: medium
+  description: Detects exposed debug, metrics and management endpoints in Node.js applications
+  tags: nodejs,exposure,misconfig,devops
+
+requests:
+
+  # ─── /metrics (Prometheus / prom-client) ────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/metrics"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "process_cpu_seconds_total"
+          - "nodejs_heap_size"
+          - "http_requests_total"
+          - "# HELP"
+          - "# TYPE"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/_health"
+      - "{{BaseURL}}/healthz"
+      - "{{BaseURL}}/health"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"status"'
+          - '"uptime"'
+          - '"version"'
+          - '"dependencies"'
+          - '"memoryUsage"'
+          - '"ok"'
+          - "healthy"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/__webpack_hmr"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "data: "
+          - "webpack"
+          - "heartbeat"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "text/event-stream"       # SSE — sinal claro de HMR exposto
+
+      - type: status
+        status:
+          - 200
+
+  # ─── /node_modules/ ─────────────────────────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/node_modules/"
+      - "{{BaseURL}}/node_modules/express/package.json"
+      - "{{BaseURL}}/node_modules/.package-lock.json"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"name"'
+          - '"version"'
+          - '"dependencies"'
+          - "node_modules"
+          - "package.json"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/swagger"
+      - "{{BaseURL}}/swagger-ui"
+      - "{{BaseURL}}/swagger-ui.html"
+      - "{{BaseURL}}/api-docs"
+      - "{{BaseURL}}/api/docs"
+      - "{{BaseURL}}/docs"
+      - "{{BaseURL}}/openapi.json"
+      - "{{BaseURL}}/swagger.json"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "swagger-ui"
+          - "swagger-initializer"
+          - "swagger.json"
+          - "openapi"
+          - '"swagger"'
+          - '"paths"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/debug"
+      - "{{BaseURL}}/__debug"
+      - "{{BaseURL}}/debug/vars"          # expvar (Go mas comum em APMs)
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"env"'
+          - '"pid"'
+          - '"memory"'
+          - '"config"'
+          - "NODE_ENV"
+          - "process.env"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.env.local"
+      - "{{BaseURL}}/.env.production"
+      - "{{BaseURL}}/.env.development"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "DB_PASSWORD"
+          - "DATABASE_URL"
+          - "SECRET_KEY"
+          - "API_KEY"
+          - "JWT_SECRET"
+          - "NODE_ENV"
+          - "PORT="
+          - "MONGO_URI"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: header
+        negative: true                    # .env nunca deve ser JSON/HTML
+        words:
+          - "text/html"

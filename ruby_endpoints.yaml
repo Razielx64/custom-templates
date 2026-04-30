@@ -1,0 +1,312 @@
+id: ruby-rails-exposed-endpoints
+
+info:
+  name: Ruby on Rails Exposed Management Endpoints
+  author: Razielx64
+  severity: medium
+  description: Detects exposed debug, admin and management endpoints in Ruby on Rails applications
+  tags: ruby,rails,exposure,misconfig
+
+requests:
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/rails/info/properties"
+      - "{{BaseURL}}/rails/info"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Rails version"
+          - "Ruby version"
+          - "RubyGems version"
+          - "Rack version"
+          - "Active Record version"
+          - "Action Pack version"
+          - "Application root"
+          - "Environment"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'Rails version.*?([\d\.]+)'
+          - 'Ruby version.*?([\d\.]+)'
+          - 'Environment.*?(production|development|staging|test)'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/rails/info/routes"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Path"
+          - "Controller#Action"
+          - "rails/info"
+          - "HTTP Verb"
+          - "Prefix"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/sidekiq"
+      - "{{BaseURL}}/sidekiq/queues"
+      - "{{BaseURL}}/sidekiq/workers"
+      - "{{BaseURL}}/sidekiq/retries"
+      - "{{BaseURL}}/sidekiq/dead"
+      - "{{BaseURL}}/sidekiq/busy"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Sidekiq"
+          - "sidekiq"
+          - "Queues"
+          - "Workers"
+          - "Processed"
+          - "Failed"
+          - "Busy"
+          - "Retries"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "sign in"
+          - "login"
+          - "unauthorized"
+          - "403"
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'redis://[^\s"<]+'           # Redis connection string
+          - '"class":"([^"]+)"'          # Job class names
+          - 'queue.*?"([^"]+)"'          # Queue names
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/letter_opener"
+      - "{{BaseURL}}/letter_opener/letters"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "letter_opener"
+          - "LetterOpener"
+          - "Sent Mail"
+          - "letter-opener"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+  # ─── /admin (devise, administrate, activeadmin) ─────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin"
+      - "{{BaseURL}}/admin/dashboard"
+      - "{{BaseURL}}/admin/users"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "ActiveAdmin"
+          - "Administrate"
+          - "Admin::ApplicationController"
+          - "Dashboard"
+          - "admin-wrapper"
+          - "active_admin"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "Sign in"
+          - "Log in"
+          - "Unauthorized"
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/resque"
+      - "{{BaseURL}}/resque-web"
+      - "{{BaseURL}}/queues"
+      - "{{BaseURL}}/workers"
+      - "{{BaseURL}}/failed"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Resque"
+          - "resque"
+          - "redis_id"
+          - "pending"
+          - "failed jobs"
+          - "Workers working"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/delayed_job"
+      - "{{BaseURL}}/delayed_job/jobs"
+      - "{{BaseURL}}/jobs"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "DelayedJob"
+          - "Delayed::Job"
+          - "delayed_job"
+          - "handler"
+          - "last_error"
+          - "failed_at"
+          - "run_at"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/bullet"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Bullet"
+          - "N+1 Query"
+          - "unused eager loading"
+          - "counter_cache"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+  # ─── /__better_errors ───────────────────────────────────────────────
+  # better_errors gem: RCE se exposto em produção (REPL interativo)
+  - method: GET
+    path:
+      - "{{BaseURL}}/__better_errors"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "BetterErrors"
+          - "better_errors"
+          - "REPL"
+          - "Live shell"
+          - "Application Trace"
+          - "Request info"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    # severity separado pois é RCE
+    # recomendado criar um template dedicado com severity: critical
+
+  # ─── /assets com source maps ────────────────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/assets/application.js.map"
+      - "{{BaseURL}}/assets/application.css.map"
+      - "{{BaseURL}}/packs/js/application.js.map"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"sourceRoot"'
+          - '"sources"'
+          - '"mappings"'
+          - '"sourcesContent"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"sources":\["([^"]+)"'      # caminhos internos do servidor
+          - '"sourceRoot":"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/metrics"
+      - "{{BaseURL}}/yabeda_metrics"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "# HELP"
+          - "# TYPE"
+          - "ruby_"
+          - "rails_"
+          - "puma_"
+          - "sidekiq_"
+        condition: or
+
+      - type: status
+        status:
+          - 200

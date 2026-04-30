@@ -1,0 +1,393 @@
+id: python-exposed-endpoints
+
+info:
+  name: Python Exposed Management Endpoints
+  author: Razielx64
+  severity: medium
+  description: Detects exposed debug, admin and management endpoints in Python applications (Django, Flask, FastAPI, etc)
+  tags: python,django,flask,fastapi,exposure,misconfig
+
+requests:
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/console"
+      - "{{BaseURL}}/__debugger__"
+      - "{{BaseURL}}/werkzeug/debugger"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Werkzeug Debugger"
+          - "Interactive Console"
+          - "debugger"
+          - "Traceback"
+          - "__debugger__"
+          - "CONSOLE"
+          - "powered by Werkzeug"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'SECRET\s*=\s*"([^"]+)"'
+          - 'PIN[:\s]+(\d[\d\-]+)'        # Werkzeug debugger PIN
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/__debug__/"
+      - "{{BaseURL}}/__debug__/render_panel/"
+      - "{{BaseURL}}/djdt/render_panel"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "djdt"
+          - "django-debug-toolbar"
+          - "DebugToolbar"
+          - "SQL Queries"
+          - "djDebug"
+          - "TimerPanel"
+          - "RequestPanel"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"sql":\s*"([^"]+)"'          # queries SQL expostas
+          - 'TIME_ZONE["\s:]+([^"<\s]+)'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/admin/login/"
+      - "{{BaseURL}}/django-admin/"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Django administration"
+          - "django-admin"
+          - "csrfmiddlewaretoken"
+          - "Django site admin"
+          - "id_username"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/admin/auth/user/"
+      - "{{BaseURL}}/admin/auth/group/"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Django administration"
+          - "Select user to change"
+          - "Add user"
+          - "auth/user"
+        condition: or
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "login"
+          - "Log in"
+          - "sign in"
+
+      - type: status
+        status:
+          - 200
+
+  # ─── Django REST Framework Browsable API ─────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/"
+      - "{{BaseURL}}/api/v1/"
+      - "{{BaseURL}}/api/v2/"
+      - "{{BaseURL}}/api/schema/"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Django REST framework"
+          - "rest_framework"
+          - "Api Root"
+          - "HTTP 200 OK"
+          - "Allow: GET, HEAD, OPTIONS"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+  # ─── Flask Debug Mode ────────────────────────────────────────────────
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/debug"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Traceback (most recent call last)"
+          - "flask.app"
+          - "werkzeug.serving"
+          - "debugger is active"
+          - "The debugger caught an exception"
+        condition: or
+
+      - type: status
+        status:
+          - 500
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/docs"
+      - "{{BaseURL}}/redoc"
+      - "{{BaseURL}}/openapi.json"
+      - "{{BaseURL}}/api/docs"
+      - "{{BaseURL}}/api/redoc"
+      - "{{BaseURL}}/api/openapi.json"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "fastapi"
+          - "FastAPI"
+          - "openapi"
+          - "swagger-ui"
+          - "ReDoc"
+          - '"openapi":'
+          - '"paths":'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"title":\s*"([^"]+)"'
+          - '"version":\s*"([^"]+)"'
+          - '"/([a-z0-9_/]+)":\s*\{'     # rotas expostas
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/flower"
+      - "{{BaseURL}}/flower/tasks"
+      - "{{BaseURL}}/flower/workers"
+      - "{{BaseURL}}:5555/"
+      - "{{BaseURL}}:5555/tasks"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Flower"
+          - "Celery"
+          - "flower"
+          - "Active tasks"
+          - "Processed"
+          - "celery@"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'celery@([^\s<"]+)'           # worker hostnames
+          - '"broker":\s*"([^"]+)"'        # broker URL (redis/rabbitmq)
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/metrics"
+      - "{{BaseURL}}/actuator/metrics"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "# HELP"
+          - "# TYPE"
+          - "python_"
+          - "django_"
+          - "flask_"
+          - "process_virtual_memory"
+          - "process_resident_memory"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/settings.py"
+      - "{{BaseURL}}/config.py"
+      - "{{BaseURL}}/local_settings.py"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "DATABASES"
+          - "SECRET_KEY"
+          - "SENTRY_DSN"
+          - "INSTALLED_APPS"
+          - "ALLOWED_HOSTS"
+          - "DEBUG = True"
+          - "DEBUG=True"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "SECRET_KEY\\s*=\\s*['\"]([^'\"]+)['\"]"
+          - "SENTRY_DSN\\s*=\\s*['\"]([^'\"]+)['\"]"
+          - "PASSWORD\\s*=\\s*['\"]([^'\"]+)['\"]"
+          - 'https://[^@]+@sentry\.io/\d+'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.env.local"
+      - "{{BaseURL}}/.env.production"
+      - "{{BaseURL}}/config/.env"
+      - "{{BaseURL}}/app/.env"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "SECRET_KEY"
+          - "DATABASE_URL"
+          - "DJANGO_SETTINGS_MODULE"
+          - "FLASK_APP"
+          - "FLASK_ENV"
+          - "REDIS_URL"
+          - "CELERY_BROKER"
+          - "AWS_ACCESS_KEY"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/tree"
+      - "{{BaseURL}}/notebooks"
+      - "{{BaseURL}}/api/kernels"
+      - "{{BaseURL}}/api/sessions"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Jupyter"
+          - "jupyter"
+          - "notebook"
+          - "ipython"
+          - "kernel_id"
+          - "nbformat"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"kernel_id":\s*"([^"]+)"'
+          - '"name":\s*"([^"]+\.ipynb)"'  # nomes dos notebooks
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/status"
+      - "{{BaseURL}}/_status"
+      - "{{BaseURL}}/health"
+      - "{{BaseURL}}/healthz"
+      - "{{BaseURL}}/ping"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"status"'
+          - '"version"'
+          - '"environment"'
+          - '"database"'
+          - '"redis"'
+          - "gunicorn"
+          - "uvicorn"
+          - "ok"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: status
+        status:
+          - 200

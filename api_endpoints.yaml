@@ -1,0 +1,517 @@
+id: api-endpoints-enhanced
+
+info:
+  name: Common API Endpoints - Enhanced
+  author: Razielx64
+  severity: medium
+  description: Detects exposed API endpoints, admin routes, and sensitive data leakage via common API paths
+  tags: api,exposure,misconfig,rest,graphql
+
+
+variables:
+  versions: "v1 v2 v3 v4 v5 v6 v7 v8 v9 v10"
+
+requests:
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/docs"
+      - "{{BaseURL}}/swagger"
+      - "{{BaseURL}}/swagger-ui"
+      - "{{BaseURL}}/swagger-ui.html"
+      - "{{BaseURL}}/swagger/index.html"
+      - "{{BaseURL}}/api-docs"
+      - "{{BaseURL}}/api/docs"
+      - "{{BaseURL}}/api/swagger"
+      - "{{BaseURL}}/openapi"
+      - "{{BaseURL}}/openapi.json"
+      - "{{BaseURL}}/openapi.yaml"
+      - "{{BaseURL}}/openapi.yml"
+      - "{{BaseURL}}/api/openapi.json"
+      - "{{BaseURL}}/api/schema"
+      - "{{BaseURL}}/api/schema.json"
+      - "{{BaseURL}}/api/schema.yaml"
+      - "{{BaseURL}}/redoc"
+      - "{{BaseURL}}/api/redoc"
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/graphiql"
+      - "{{BaseURL}}/playground"
+      - "{{BaseURL}}/altair"
+      - "{{BaseURL}}/__graphql"
+      - "{{BaseURL}}/api/graphql"
+      - "{{BaseURL}}/v1/graphql"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "swagger"
+          - "openapi"
+          - "ReDoc"
+          - "graphql"
+          - "GraphiQL"
+          - '"paths":'
+          - '"definitions":'
+          - '"components":'
+          - "swagger-ui"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"title":\s*"([^"]+)"'
+          - '"version":\s*"([^"]+)"'
+          - '"/([a-z0-9_/-]+)":\s*\{'      # rotas expostas no schema
+          - '"basePath":\s*"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/admin"
+      - "{{BaseURL}}/api/v1/admin"
+      - "{{BaseURL}}/api/v2/admin"
+      - "{{BaseURL}}/api/v3/admin"
+      - "{{BaseURL}}/server/api/admin"
+      - "{{BaseURL}}/api/admin/users"
+      - "{{BaseURL}}/api/admin/config"
+      - "{{BaseURL}}/api/admin/dashboard"
+      - "{{BaseURL}}/api/admin/settings"
+      - "{{BaseURL}}/api/internal"
+      - "{{BaseURL}}/api/internal/admin"
+      - "{{BaseURL}}/api/private"
+      - "{{BaseURL}}/api/private/users"
+      - "{{BaseURL}}/api/management"
+      - "{{BaseURL}}/api/management/health"
+      - "{{BaseURL}}/management/api"
+      - "{{BaseURL}}/api/system"
+      - "{{BaseURL}}/api/system/info"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+          - "application/xml"
+          - "text/xml"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "404 Not Found"
+          - "Page Not Found"
+          - "not found"
+          - "error"
+        condition: and
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"role":\s*"([^"]+)"'
+          - '"email":\s*"([^"]+)"'
+          - '"token":\s*"([^"]+)"'
+          - '"api_key":\s*"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users"
+      - "{{BaseURL}}/api/v1/users"
+      - "{{BaseURL}}/api/v2/users"
+      - "{{BaseURL}}/api/v3/users"
+      - "{{BaseURL}}/api/accounts"
+      - "{{BaseURL}}/api/v1/accounts"
+      - "{{BaseURL}}/api/v2/accounts"
+      - "{{BaseURL}}/api/v3/accounts"
+      - "{{BaseURL}}/api/v1/profile"
+      - "{{BaseURL}}/api/v2/profile"
+      - "{{BaseURL}}/api/members"
+      - "{{BaseURL}}/api/v1/members"
+      - "{{BaseURL}}/rest/api/users"
+      - "{{BaseURL}}/api/account/metadata/"
+      - "{{BaseURL}}/api/user/list"
+      - "{{BaseURL}}/api/v1/user/list"
+      - "{{BaseURL}}/api/customers"
+      - "{{BaseURL}}/api/v1/customers"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"id"'
+          - '"uuid"'
+          - '"email"'
+          - '"username"'
+          - '"password"'
+          - '"role"'
+          - '"token"'
+          - '"users"'
+          - '"accounts"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"email":\s*"([^"]+)"'
+          - '"username":\s*"([^"]+)"'
+          - '"role":\s*"([^"]+)"'
+          - '"id":\s*(\d+)'
+          - '"uuid":\s*"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/config"
+      - "{{BaseURL}}/api/v1/config"
+      - "{{BaseURL}}/api/v2/config"
+      - "{{BaseURL}}/api/v3/config"
+      - "{{BaseURL}}/api/settings"
+      - "{{BaseURL}}/api/v1/settings"
+      - "{{BaseURL}}/api/v2/settings"
+      - "{{BaseURL}}/api/env"
+      - "{{BaseURL}}/api/v1/env"
+      - "{{BaseURL}}/api/configuration"
+      - "{{BaseURL}}/api/v1/configuration"
+      - "{{BaseURL}}/rest/api/config"
+      - "{{BaseURL}}/api/system/config"
+      - "{{BaseURL}}/api/app/config"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"config"'
+          - '"settings"'
+          - '"environment"'
+          - '"database"'
+          - '"redis"'
+          - '"secret"'
+          - '"key"'
+          - '"password"'
+          - '"host"'
+          - '"port"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"password":\s*"([^"]+)"'
+          - '"secret":\s*"([^"]+)"'
+          - '"api_key":\s*"([^"]+)"'
+          - '"database_url":\s*"([^"]+)"'
+          - '"redis_url":\s*"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/health"
+      - "{{BaseURL}}/api/v1/health"
+      - "{{BaseURL}}/api/v2/health"
+      - "{{BaseURL}}/api/v3/health"
+      - "{{BaseURL}}/api/status"
+      - "{{BaseURL}}/api/v1/status"
+      - "{{BaseURL}}/api/ping"
+      - "{{BaseURL}}/api/v1/ping"
+      - "{{BaseURL}}/rest/api/health"
+      - "{{BaseURL}}/api/health/live"
+      - "{{BaseURL}}/api/health/ready"
+      - "{{BaseURL}}/api/healthcheck"
+      - "{{BaseURL}}/api/system/health"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"status"'
+          - '"version"'
+          - '"uptime"'
+          - '"database"'
+          - '"dependencies"'
+          - '"checks"'
+          - '"healthy"'
+          - '"ok"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"version":\s*"([^"]+)"'       
+          - '"database":\s*"([^"]+)"'     
+          - '"environment":\s*"([^"]+)"'  
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/webhooks"
+      - "{{BaseURL}}/api/v1/webhooks"
+      - "{{BaseURL}}/api/v2/webhooks"
+      - "{{BaseURL}}/api/v3/webhooks"
+      - "{{BaseURL}}/api/webhook"
+      - "{{BaseURL}}/api/v1/webhook"
+      - "{{BaseURL}}/rest/api/webhooks"
+      - "{{BaseURL}}/api/integrations"
+      - "{{BaseURL}}/api/v1/integrations"
+      - "{{BaseURL}}/api/callbacks"
+      - "{{BaseURL}}/api/v1/callbacks"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"webhook"'
+          - '"webhooks"'
+          - '"url"'
+          - '"endpoint"'
+          - '"secret"'
+          - '"callback"'
+          - '"integration"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"url":\s*"(https?://[^"]+)"'  
+          - '"secret":\s*"([^"]+)"'        
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/orders"
+      - "{{BaseURL}}/api/v1/orders"
+      - "{{BaseURL}}/api/v2/orders"
+      - "{{BaseURL}}/api/v3/orders"
+      - "{{BaseURL}}/api/payments"
+      - "{{BaseURL}}/api/v1/payments"
+      - "{{BaseURL}}/api/transactions"
+      - "{{BaseURL}}/api/v1/transactions"
+      - "{{BaseURL}}/api/invoices"
+      - "{{BaseURL}}/api/v1/invoices"
+      - "{{BaseURL}}/rest/api/orders"
+      - "{{BaseURL}}/api/billing"
+      - "{{BaseURL}}/api/v1/billing"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"order"'
+          - '"orders"'
+          - '"payment"'
+          - '"transaction"'
+          - '"amount"'
+          - '"total"'
+          - '"card"'
+          - '"billing"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"card_number":\s*"([^"]+)"'
+          - '"cvv":\s*"([^"]+)"'
+          - '"amount":\s*([\d\.]+)'
+          - '"email":\s*"([^"]+)"'
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/v1/log"
+      - "{{BaseURL}}/api/v1/logs"
+      - "{{BaseURL}}/api/v2/logs"
+      - "{{BaseURL}}/api/logs"
+      - "{{BaseURL}}/api/debug"
+      - "{{BaseURL}}/api/v1/debug"
+      - "{{BaseURL}}/api/errors"
+      - "{{BaseURL}}/api/v1/errors"
+      - "{{BaseURL}}/api/audit"
+      - "{{BaseURL}}/api/v1/audit"
+      - "{{BaseURL}}/api/audit/logs"
+      - "{{BaseURL}}/api/events"
+      - "{{BaseURL}}/api/v1/events"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"level"'
+          - '"message"'
+          - '"timestamp"'
+          - '"trace"'
+          - '"stacktrace"'
+          - '"error"'
+          - '"exception"'
+          - '"log"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"message":\s*"([^"]+)"'
+          - '"level":\s*"(error|critical|fatal|warn)[^"]*"'
+          - '"exception":\s*"([^"]+)"'
+
+
+  - method: POST
+    path:
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/api/graphql"
+      - "{{BaseURL}}/v1/graphql"
+      - "{{BaseURL}}/graphiql"
+      - "{{BaseURL}}/query"
+
+    headers:
+      Content-Type: application/json
+
+    body: '{"query":"{ __schema { queryType { name } types { name kind fields { name } } } }"}'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"__schema"'
+          - '"queryType"'
+          - '"types"'
+          - '"fields"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"name":\s*"([A-Z][a-zA-Z]+)"'  # tipos do schema GraphQL
+
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/token"
+      - "{{BaseURL}}/api/v1/token"
+      - "{{BaseURL}}/api/tokens"
+      - "{{BaseURL}}/api/v1/tokens"
+      - "{{BaseURL}}/api/auth/token"
+      - "{{BaseURL}}/api/v1/auth/token"
+      - "{{BaseURL}}/api/oauth/token"
+      - "{{BaseURL}}/api/jwt"
+      - "{{BaseURL}}/api/refresh"
+      - "{{BaseURL}}/api/v1/refresh"
+      - "{{BaseURL}}/api/keys"
+      - "{{BaseURL}}/api/v1/keys"
+      - "{{BaseURL}}/api/api-keys"
+      - "{{BaseURL}}/.well-known/jwks.json"
+      - "{{BaseURL}}/.well-known/openid-configuration"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"token"'
+          - '"access_token"'
+          - '"refresh_token"'
+          - '"jwt"'
+          - '"keys"'
+          - '"kid"'
+          - '"alg"'
+          - '"api_key"'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - 'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'  # JWT
+          - '"api_key":\s*"([^"]+)"'
+          - '"kid":\s*"([^"]+)"'                                         # Key ID do JWKS

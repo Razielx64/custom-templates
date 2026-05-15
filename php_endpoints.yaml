@@ -266,9 +266,21 @@ requests:
       - "{{BaseURL}}/wp-json/"
       - "{{BaseURL}}/xmlrpc.php"
       - "{{BaseURL}}/?author=1"
+      - "{{BaseURL}}/config.php.bak"
+      - "{{BaseURL}}/config.php.old"
+      - "{{BaseURL}}/config.php.backup"
+      - "{{BaseURL}}/config.php~"
+      - "{{BaseURL}}/config.inc.php.bak"
+      - "{{BaseURL}}/config.inc.php.old"
+      - "{{BaseURL}}/config.inc.php.backup"
+      - "{{BaseURL}}/configuration.php.bak"
       - "{{BaseURL}}/wp-config.php.bak"
       - "{{BaseURL}}/wp-config.php.old"
-      - "{{BaseURL}}/wp-config.bak"
+      - "{{BaseURL}}/database.php.bak"
+      - "{{BaseURL}}/db.php.bak"
+      - "{{BaseURL}}/settings.php.bak"
+      - "{{BaseURL}}/.config.php.swp"
+      - "{{BaseURL}}/.config.inc.php.swp"
 
     matchers-condition: and
     matchers:

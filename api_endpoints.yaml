@@ -147,6 +147,11 @@ requests:
       - "{{BaseURL}}/api/v1/user/list"
       - "{{BaseURL}}/api/customers"
       - "{{BaseURL}}/api/v1/customers"
+      - "{{BaseURL}}/api/v1/usuarios"
+      - "{{BaseURL}}/api/v2/usuarios"
+      - "{{BaseURL}}/api/v3/usuarios"
+      - "{{BaseURL}}/api/usuarios"
+      - "{{BaseURL}}/usuarios"
 
     matchers-condition: and
     matchers:
